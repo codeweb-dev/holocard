@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 446" width="320" height="446">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#04222a"/>
+      <stop offset="1" stop-color="#05050d"/>
+    </linearGradient>
+    <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="446" fill="url(#bg)"/>
+  <g transform="rotate(-18 160 223)">
+    <rect x="-40" y="196" width="200" height="3" fill="url(#beam)"/>
+    <g opacity=".85">
+      <rect x="160" y="150" width="220" height="14" fill="#ff00aa"/>
+      <rect x="160" y="172" width="220" height="14" fill="#ff7a00"/>
+      <rect x="160" y="194" width="220" height="14" fill="#fff000"/>
+      <rect x="160" y="216" width="220" height="14" fill="#00ffc8"/>
+      <rect x="160" y="238" width="220" height="14" fill="#00b3ff"/>
+      <rect x="160" y="260" width="220" height="14" fill="#505aff"/>
+    </g>
+  </g>
+  <path d="M160 130 L232 268 L88 268 Z" fill="#0b1620" fill-opacity=".82" stroke="#ffffff" stroke-opacity=".35"/>
+  <rect x="12" y="12" width="296" height="422" rx="10" fill="none" stroke="#ffffff" stroke-opacity=".16"/>
+  <path d="M24 24h26M24 24v26" stroke="#ffffff" stroke-opacity=".3" stroke-width="1.5"/>
+  <path d="M296 422h-26M296 422v-26" stroke="#ffffff" stroke-opacity=".3" stroke-width="1.5"/>
+</svg>
