@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Check, Copy, Moon, Sun } from "lucide-react";
 import { HoloCard } from "react-holo-card";
@@ -15,13 +15,32 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 const INSTALL = "npm install react-holo-card";
 const GITHUB = "https://github.com/codeweb-dev/holo-card";
 const NPM = "https://www.npmjs.com/package/react-holo-card";
-const VERSION = "0.3.3";
+const VERSION = "0.3.4";
 
 /** The four Base Set holos, straight off pokemontcg.io — nothing ships in the repo. */
 const ART_API =
   "https://api.pokemontcg.io/v2/cards?q=set.id:base1&pageSize=4&select=id,name,images";
 
 type Art = { id: string; file: string; alt: string };
+
+const toArt = (name: string, file: string): Art => ({
+  id: name.toLowerCase(),
+  file,
+  alt: `${name}, a holographic card from the Pokémon Base Set`,
+});
+
+/** The API 500s a few times an hour. Its image CDN doesn't — same four cards, no request. */
+const FALLBACK = ["Alakazam", "Blastoise", "Chansey", "Charizard"].map(
+  (name, i) => toArt(name, `https://images.pokemontcg.io/base1/${i + 1}_hires.png`),
+);
+
+/** iOS 13+ is the only engine that withholds orientation until a gesture asks for it. */
+const NEEDS_GYRO_TAP =
+  typeof (
+    window.DeviceOrientationEvent as unknown as {
+      requestPermission?: unknown;
+    }
+  )?.requestPermission === "function";
 
 /** Stagger index for the shared rise-in animation. */
 const at = (i: number) => ({ "--i": i }) as CSSProperties;
@@ -62,8 +81,13 @@ const API: [prop: string, type: string, def: string, desc: string][] = [
     "none · sm · md · lg · xl · full, or raw px",
   ],
   ["showSparkles", "boolean", "true", "Rainbow foil sparkle layer"],
-  ["maxTilt", "number", "14", "Max tilt rotation in degrees at the edge"],
-  ["gyro", "boolean", "true", "Tilt with the device gyroscope on mobile"],
+  ["maxTilt", "number", "30", "Max tilt rotation in degrees at the edge"],
+  [
+    "gyro",
+    "boolean",
+    "true",
+    "Tilt with the device gyroscope. iOS 13+ only grants motion after a tap, so the card asks on its first click — give users a visible button too",
+  ],
   ["alt", "string", '""', "Alt text for the image"],
   ["className", "string", "—", "Extra class on the root element"],
   ["style", "object", "—", "Extra inline styles on the root element"],
@@ -164,30 +188,37 @@ export default function App() {
   const [pick, setPick] = useState("");
   const [radius, setRadius] = useState<HoloCardProps["radius"]>("md");
   const [sparkles, setSparkles] = useState(true);
-  const [tilt, setTilt] = useState(14);
+  const [tilt, setTilt] = useState(30);
   const [gyro, setGyro] = useState(true);
+  const [ready, setReady] = useState(false);
+  const stage = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ac = new AbortController();
     fetch(ART_API, { signal: ac.signal })
-      .then((r) => r.json())
-      .then(({ data }) => {
-        const next: Art[] = data.map(
-          (c: { name: string; images: { large: string } }) => ({
-            id: c.name.toLowerCase(),
-            file: c.images.large,
-            alt: `${c.name}, a holographic card from the Pokémon Base Set`,
-          }),
-        );
-        setCards(next);
-        setPick(next[0].id);
-      })
-      // ponytail: API down or rate-limited just leaves the placeholder up. No retry until it's a real problem.
-      .catch(() => {});
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then(({ data }: { data: { name: string; images: { large: string } }[] }) =>
+        setCards(data.map((c) => toArt(c.name, c.images.large))),
+      )
+      // ponytail: one shot, then the hardcoded CDN URLs. No retry loop for a demo.
+      .catch(() => !ac.signal.aborted && setCards(FALLBACK));
     return () => ac.abort();
   }, []);
 
-  const art = cards.find((c) => c.id === pick);
+  const art = cards.find((c) => c.id === pick) ?? cards[0];
+  const url = art?.file;
+
+  // The hires PNGs run ~1 MB. Decode first, then mount the card, so it never pops in half-drawn.
+  useEffect(() => {
+    if (!url) return;
+    setReady(false);
+    const img = new Image();
+    img.onload = img.onerror = () => setReady(true);
+    img.src = url;
+    return () => {
+      img.onload = img.onerror = null;
+    };
+  }, [url]);
 
   const snippet = [
     "<HoloCard",
@@ -195,7 +226,7 @@ export default function App() {
     "  width={280} height={390}",
     radius !== "md" && `  radius="${radius}"`,
     !sparkles && "  showSparkles={false}",
-    tilt !== 14 && `  maxTilt={${tilt}}`,
+    tilt !== 30 && `  maxTilt={${tilt}}`,
     !gyro && "  gyro={false}",
     "/>",
   ]
@@ -234,8 +265,11 @@ export default function App() {
       </p>
 
       <section className="rise mb-6" style={at(2)}>
-        <div className="grid place-items-center rounded-lg bg-card bg-[image:repeating-linear-gradient(90deg,transparent_0_27px,color-mix(in_srgb,var(--foreground)_3%,transparent)_27px_28px)] pt-7 pb-8 ring-1 ring-border ring-inset">
-          {art ? (
+        <div
+          ref={stage}
+          className="grid place-items-center rounded-lg bg-card bg-[image:repeating-linear-gradient(90deg,transparent_0_27px,color-mix(in_srgb,var(--foreground)_3%,transparent)_27px_28px)] pt-7 pb-8 ring-1 ring-border ring-inset"
+        >
+          {art && ready ? (
             <HoloCard
               url={art.file}
               alt={art.alt}
@@ -248,16 +282,43 @@ export default function App() {
             />
           ) : (
             <div
-              className="h-[390px] w-[280px] animate-pulse rounded-md bg-muted"
+              className="grid h-[390px] w-[280px] animate-pulse place-items-center rounded-md bg-muted px-6 text-center text-[11px] text-balance text-muted-foreground"
               role="status"
-              aria-label="Loading card art"
-            />
+            >
+              {art
+                ? `Loading ${art.id} — full-resolution scans run about a megabyte.`
+                : "Fetching cards from pokemontcg.io…"}
+            </div>
           )}
         </div>
         <p className="mt-2 text-center text-[11px] text-muted-foreground">
           Move your pointer across the card — or tilt your phone. That's the
           whole API.
         </p>
+        {NEEDS_GYRO_TAP && (
+          <div className="mt-2.5 flex flex-col items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!gyro || !ready}
+              className="h-8 text-[11.5px]"
+              // HoloCard asks iOS for motion access on its own click. Forward this one so a
+              // visible button works as well as tapping the art — same user gesture either way.
+              onClick={() =>
+                stage.current
+                  ?.querySelector<HTMLElement>(".holo-card")
+                  ?.click()
+              }
+            >
+              Enable motion tilt
+            </Button>
+            <p className="text-center text-[10.5px] text-balance text-muted-foreground">
+              iOS won't hand out gyroscope data until you approve it, and only
+              over HTTPS. Tapping the card asks too — but ship a button like
+              this so people know the permission exists.
+            </p>
+          </div>
+        )}
       </section>
 
       <section className="rise mb-6" style={at(3)}>
@@ -268,7 +329,7 @@ export default function App() {
             type="single"
             variant="outline"
             size="sm"
-            value={pick}
+            value={art?.id ?? ""}
             onValueChange={(v) => v && setPick(v)}
             className="justify-start sm:justify-end"
           >
@@ -309,7 +370,7 @@ export default function App() {
           <div className="flex items-center gap-3">
             <Slider
               min={0}
-              max={30}
+              max={50}
               step={1}
               value={[tilt]}
               onValueChange={([v]) => setTilt(v)}
@@ -322,7 +383,7 @@ export default function App() {
           </div>
         </Row>
 
-        <Row label="gyro" hint="new in 0.3 · tilt your phone">
+        <Row label="gyro" hint="tilt your phone · iOS needs approval">
           <Switch
             checked={gyro}
             onCheckedChange={setGyro}
