@@ -11,6 +11,11 @@ import { HoloCard } from 'react-holo-card'
 
 Nothing here reaches into `../holo-card/src`.
 
+Stack: Vite + React 19, Tailwind CSS v4 (`@tailwindcss/vite`, CSS-first config in
+`src/index.css`), shadcn/ui on Radix primitives (`src/components/ui`). Theme
+tokens are set once in `:root` / `.dark`; the pre-paint script in `index.html`
+applies the stored or system theme before first paint.
+
 ## Run it
 
 ```

@@ -9,12 +9,12 @@
       content="react-holo-card renders a pointer-reactive holographic card in React — tilt, glare, and rainbow foil, driven by CSS custom properties."
     />
     <title>holocard — pointer-reactive holographic cards for React</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
+    <script>
+      // Set the theme before first paint so dark mode never flashes white.
+      const stored = localStorage.getItem('theme')
+      const dark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
+      document.documentElement.classList.toggle('dark', dark)
+    </script>
   </head>
   <body>
     <div id="root"></div>

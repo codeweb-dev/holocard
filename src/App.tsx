@@ -1,110 +1,233 @@
-import { useState } from 'react'
-import type { CSSProperties } from 'react'
-import { HoloCard } from 'react-holo-card'
-import type { HoloCardProps } from 'react-holo-card'
+import { useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { Check, Copy, Moon, Sun } from "lucide-react";
+import { HoloCard } from "react-holo-card";
+import type { HoloCardProps } from "react-holo-card";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
+const INSTALL = "npm install react-holo-card";
+const GITHUB = "https://github.com/codeweb-dev/holo-card";
+const NPM = "https://www.npmjs.com/package/react-holo-card";
+const VERSION = "0.2.0";
 
 /** Stagger index for the shared rise-in animation. */
-const at = (i: number) => ({ '--i': i }) as CSSProperties
+const at = (i: number) => ({ "--i": i }) as CSSProperties;
 
-const INSTALL = 'npm install react-holo-card'
-const GITHUB = 'https://github.com/codeweb-dev/holo-card'
-const NPM = 'https://www.npmjs.com/package/react-holo-card'
-const VERSION = '0.2.0'
-
-/** The four stops of the component's own foil gradient, one per card art. */
 const ART = [
-  { id: 'aurora', color: '#ff00aa', alt: 'Aurora — layered nebula card art' },
-  { id: 'prism', color: '#fff000', alt: 'Prism — refracted spectrum card art' },
-  { id: 'orbit', color: '#00ffc8', alt: 'Orbit — concentric ring card art' },
-  { id: 'bloom', color: '#505aff', alt: 'Bloom — concentric bloom card art' },
-]
+  {
+    id: "aurora",
+    file: "/cards/aurora.jpg",
+    alt: "Green aurora borealis rippling over a silhouetted pine forest under a starry sky",
+  },
+  {
+    id: "prism",
+    file: "/cards/prism.jpg",
+    alt: "A rainbow spectrum cast diagonally across a dark grey surface",
+  },
+  {
+    id: "orbit",
+    file: "/cards/orbit.jpg",
+    alt: "Concentric neon rings orbiting a glowing pale sphere, fringed with prismatic colour",
+  },
+  {
+    id: "bloom",
+    file: "/cards/bloom.png",
+    alt: "Cherry trees in pink blossom along a winding stream edged with wildflowers",
+  },
+];
 
-const RADII = ['none', 'sm', 'md', 'lg', 'xl', 'full'] as const
+const RADII = ["none", "sm", "md", "lg", "xl", "full"] as const;
 
 const LAYERS = [
-  ['--rx --ry', 'Tilt', 'Pointer position becomes a rotateX / rotateY, clamped to maxTilt.'],
-  ['--mx --my', 'Glare', 'A specular hotspot under the cursor, plus a sheen band sweeping back.'],
-  ['--distance', 'Foil', 'A diagonal rainbow in color-dodge, strengthening toward the edge.'],
-  ['0 deps', 'Quiet', 'Values are written to the DOM in rAF. React never re-renders on move.'],
-]
+  [
+    "--rx --ry",
+    "Tilt",
+    "Pointer position becomes a rotateX / rotateY, clamped to maxTilt.",
+  ],
+  [
+    "--mx --my",
+    "Glare",
+    "A specular hotspot under the cursor, plus a sheen band sweeping back.",
+  ],
+  [
+    "--distance",
+    "Foil",
+    "A diagonal rainbow in color-dodge, strengthening toward the edge.",
+  ],
+  [
+    "0 deps",
+    "Quiet",
+    "Values are written to the DOM in rAF. React never re-renders on move.",
+  ],
+];
 
 const API: [prop: string, type: string, def: string, desc: string][] = [
-  ['url', 'string', '—', 'Image URL rendered inside the card'],
-  ['width', 'number', '320', 'Card width in px'],
-  ['height', 'number', '446', 'Card height in px'],
-  ['radius', 'preset | number', '"md"', 'none · sm · md · lg · xl · full, or raw px'],
-  ['showSparkles', 'boolean', 'true', 'Rainbow foil sparkle layer'],
-  ['maxTilt', 'number', '14', 'Max tilt rotation in degrees at the edge'],
-  ['alt', 'string', '""', 'Alt text for the image'],
-  ['className', 'string', '—', 'Extra class on the root element'],
-  ['style', 'object', '—', 'Extra inline styles on the root element'],
-]
+  ["url", "string", "—", "Image URL rendered inside the card"],
+  ["width", "number", "320", "Card width in px"],
+  ["height", "number", "446", "Card height in px"],
+  [
+    "radius",
+    "preset | number",
+    '"md"',
+    "none · sm · md · lg · xl · full, or raw px",
+  ],
+  ["showSparkles", "boolean", "true", "Rainbow foil sparkle layer"],
+  ["maxTilt", "number", "14", "Max tilt rotation in degrees at the edge"],
+  ["alt", "string", '""', "Alt text for the image"],
+  ["className", "string", "—", "Extra class on the root element"],
+  ["style", "object", "—", "Extra inline styles on the root element"],
+];
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false)
+const CHIP =
+  "h-7 rounded-md px-2.5 text-[11px] font-medium data-[state=on]:bg-primary data-[state=on]:text-primary-foreground";
+
+function SectionTitle({ children, note }: { children: string; note: string }) {
+  return (
+    <h2 className="mb-2 text-[12.5px] font-medium tracking-[-0.009em] text-card-foreground">
+      {children}
+      <small className="ml-2 text-[11px] font-normal text-muted-foreground">
+        {note}
+      </small>
+    </h2>
+  );
+}
+
+function Row({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex min-h-[46px] flex-col justify-center gap-2 border-b border-border py-2 first:border-t sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <span className="font-mono text-[11px] tracking-normal whitespace-nowrap text-card-foreground">
+        {label}
+        <span className="block font-sans text-[10.5px] tracking-[-0.006em] text-muted-foreground">
+          {hint}
+        </span>
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function ThemeToggle() {
+  const [dark, setDark] = useState(() =>
+    document.documentElement.classList.contains("dark"),
+  );
 
   return (
-    <button
-      type="button"
-      className={copied ? 'copy copied' : 'copy'}
+    <Button
+      variant="ghost"
+      size="icon"
+      className="size-7 text-muted-foreground"
+      aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+      onClick={() => {
+        const next = !dark;
+        setDark(next);
+        document.documentElement.classList.toggle("dark", next);
+        localStorage.setItem("theme", next ? "dark" : "light");
+      }}
+    >
+      {dark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+    </Button>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="size-7 text-muted-foreground"
       aria-label="Copy install command"
       onClick={() =>
-        navigator.clipboard.writeText(text).then(() => {
-          setCopied(true)
-          setTimeout(() => setCopied(false), 1600)
-        }, () => {})
+        navigator.clipboard.writeText(text).then(
+          () => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1600);
+          },
+          () => {},
+        )
       }
     >
-      <span aria-hidden="true">{copied ? 'copied' : 'copy'}</span>
+      {copied ? (
+        <Check className="size-3.5 text-primary" />
+      ) : (
+        <Copy className="size-3.5" />
+      )}
       <span className="sr-only" role="status">
-        {copied ? 'Copied to clipboard' : ''}
+        {copied ? "Copied to clipboard" : ""}
       </span>
-    </button>
-  )
+    </Button>
+  );
 }
 
 export default function App() {
-  const [art, setArt] = useState(ART[0])
-  const [radius, setRadius] = useState<HoloCardProps['radius']>('md')
-  const [sparkles, setSparkles] = useState(true)
-  const [tilt, setTilt] = useState(14)
+  const [art, setArt] = useState(ART[0]);
+  const [radius, setRadius] = useState<HoloCardProps["radius"]>("md");
+  const [sparkles, setSparkles] = useState(true);
+  const [tilt, setTilt] = useState(14);
 
   const snippet = [
-    '<HoloCard',
-    `  url="/cards/${art.id}.svg"`,
-    '  width={280} height={390}',
-    radius !== 'md' && `  radius="${radius}"`,
-    !sparkles && '  showSparkles={false}',
+    "<HoloCard",
+    `  url="${art.file}"`,
+    "  width={280} height={390}",
+    radius !== "md" && `  radius="${radius}"`,
+    !sparkles && "  showSparkles={false}",
     tilt !== 14 && `  maxTilt={${tilt}}`,
-    '/>',
+    "/>",
   ]
     .filter(Boolean)
-    .join('\n')
+    .join("\n");
 
   return (
-    <main>
-      <header style={at(0)}>
-        <h1>
-          <span className="dot" style={{ background: art.color }} aria-hidden="true" />
+    <main className="mx-auto w-full max-w-[520px] px-5 pt-10 pb-9">
+      <header
+        className="rise mb-0.5 flex items-baseline justify-between"
+        style={at(0)}
+      >
+        <h1 className="flex items-center gap-2 text-[21px] font-semibold tracking-[-0.026em] text-primary">
           holocard
         </h1>
-        <div className="header-right">
-          <span className="meta">v{VERSION} · 0 deps</span>
-          <a className="gh" href={GITHUB}>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[10.5px] tracking-normal text-muted-foreground">
+            v{VERSION} · 0 deps
+          </span>
+          <a
+            href={GITHUB}
+            className="text-[12px] text-muted-foreground transition-colors hover:text-primary"
+          >
             GitHub
           </a>
+          <ThemeToggle />
         </div>
       </header>
 
-      <p className="tagline" style={at(1)}>
-        A card that tilts, catches the light, and throws rainbow foil — everywhere your pointer
-        goes. <strong>Every control below drives the real component.</strong>
+      <p className="rise mt-0.5 mb-6 text-pretty" style={at(1)}>
+        A card that tilts, catches the light, and throws rainbow foil —
+        everywhere your pointer goes.{" "}
+        <strong className="font-medium text-card-foreground">
+          Every control below drives the real component.
+        </strong>
       </p>
 
-      <section style={at(2)}>
-        <div className="stage">
+      <section className="rise mb-6" style={at(2)}>
+        <div className="grid place-items-center rounded-lg bg-card bg-[image:repeating-linear-gradient(90deg,transparent_0_27px,color-mix(in_srgb,var(--foreground)_3%,transparent)_27px_28px)] pt-7 pb-8 ring-1 ring-border ring-inset">
           <HoloCard
-            url={`/cards/${art.id}.svg`}
+            url={art.file}
             alt={art.alt}
             width={280}
             height={390}
@@ -113,148 +236,171 @@ export default function App() {
             maxTilt={tilt}
           />
         </div>
-        <p className="hint">Move your pointer across the card. That's the whole API.</p>
+        <p className="mt-2 text-center text-[11px] text-muted-foreground">
+          Move your pointer across the card. That's the whole API.
+        </p>
       </section>
 
-      <section style={at(3)}>
-        <h2>
-          Props <small>live</small>
-        </h2>
+      <section className="rise mb-6" style={at(3)}>
+        <SectionTitle note="live">Props</SectionTitle>
 
-        <div className="row">
-          <span className="row-label">
-            url
-            <span className="row-hint">card art</span>
-          </span>
-          <div className="chips">
-            {ART.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={item.id === art.id ? 'chip on' : 'chip'}
-                aria-pressed={item.id === art.id}
-                onClick={() => setArt(item)}
-              >
-                <i style={{ background: item.color }} />
-                {item.id}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="row">
-          <span className="row-label">
-            radius
-            <span className="row-hint">new in 0.2</span>
-          </span>
-          <div className="chips">
-            {RADII.map((r) => (
-              <button
-                key={r}
-                type="button"
-                className={r === radius ? 'chip on' : 'chip'}
-                aria-pressed={r === radius}
-                onClick={() => setRadius(r)}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="row">
-          <span className="row-label">
-            showSparkles
-            <span className="row-hint">rainbow foil</span>
-          </span>
-          <button
-            type="button"
-            role="switch"
-            className="switch"
-            aria-checked={sparkles}
-            aria-label="Toggle rainbow foil"
-            onClick={() => setSparkles((on) => !on)}
+        <Row label="url" hint="card art">
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={art.id}
+            onValueChange={(v) => v && setArt(ART.find((a) => a.id === v)!)}
+            className="justify-start sm:justify-end"
           >
-            <span className="knob" />
-          </button>
-        </div>
+            {ART.map((item) => (
+              <ToggleGroupItem key={item.id} value={item.id} className={CHIP}>
+                {item.id}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </Row>
 
-        <div className="row">
-          <span className="row-label">
-            maxTilt
-            <span className="row-hint">degrees at the edge</span>
-          </span>
-          <div className="range">
-            <input
-              type="range"
+        <Row label="radius" hint="new in 0.2">
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={radius as string}
+            onValueChange={(v) => v && setRadius(v as HoloCardProps["radius"])}
+            className="justify-start sm:justify-end"
+          >
+            {RADII.map((r) => (
+              <ToggleGroupItem key={r} value={r} className={CHIP}>
+                {r}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </Row>
+
+        <Row label="showSparkles" hint="rainbow foil">
+          <Switch
+            checked={sparkles}
+            onCheckedChange={setSparkles}
+            aria-label="Toggle rainbow foil"
+          />
+        </Row>
+
+        <Row label="maxTilt" hint="degrees at the edge">
+          <div className="flex items-center gap-3">
+            <Slider
               min={0}
               max={30}
-              value={tilt}
+              step={1}
+              value={[tilt]}
+              onValueChange={([v]) => setTilt(v)}
               aria-label="Max tilt in degrees"
-              onChange={(e) => setTilt(Number(e.target.value))}
+              className="w-full sm:w-[140px]"
             />
-            <output>{tilt}°</output>
+            <output className="w-8 text-right font-mono text-[11px] tabular-nums text-muted-foreground">
+              {tilt}°
+            </output>
           </div>
-        </div>
+        </Row>
 
-        <pre className="code">{snippet}</pre>
+        <pre className="mt-2.5 overflow-x-auto rounded-lg bg-card px-4 py-3.5 font-mono text-[11px] leading-[1.65] tracking-normal text-card-foreground ring-1 ring-border ring-inset">
+          {snippet}
+        </pre>
       </section>
 
-      <section style={at(4)}>
-        <h2>
-          How it works <small>three layers, zero re-renders</small>
-        </h2>
-        <div className="features">
+      <section className="rise mb-6" style={at(4)}>
+        <SectionTitle note="three layers, zero re-renders">
+          How it works
+        </SectionTitle>
+        <div className="grid gap-1.5 sm:grid-cols-2">
           {LAYERS.map(([vars, title, body]) => (
-            <article className="feature" key={title}>
-              <code className="f-vars">{vars}</code>
-              <span className="f-title">{title}</span>
-              <span className="f-desc">{body}</span>
-            </article>
+            <Card key={title} size="sm" className="rounded-lg ring-border">
+              <CardContent>
+                <code className="font-mono text-[10px] tracking-normal text-primary">
+                  {vars}
+                </code>
+                <div className="mt-1.5 text-[12px] font-medium text-card-foreground">
+                  {title}
+                </div>
+                <p className="mt-0.5 text-[10.5px] leading-[1.45] text-pretty text-muted-foreground">
+                  {body}
+                </p>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </section>
 
-      <section style={at(5)}>
-        <h2>
-          Install <small>peer dependency: react ≥ 17</small>
-        </h2>
-        <div className="command">
-          <span className="prompt">$</span>
-          <code>{INSTALL}</code>
+      <section className="rise mb-6" style={at(5)}>
+        <SectionTitle note="peer dependency: react ≥ 17">Install</SectionTitle>
+        <div className="flex items-center gap-2.5 rounded-lg bg-card py-1.5 pr-1.5 pl-3 ring-1 ring-border ring-inset">
+          <span className="font-mono text-[11.5px] text-muted-foreground">
+            $
+          </span>
+          <code className="flex-1 overflow-x-auto font-mono text-[11.5px] tracking-normal whitespace-nowrap text-primary">
+            {INSTALL}
+          </code>
           <CopyButton text={INSTALL} />
         </div>
       </section>
 
-      <section style={at(6)}>
-        <h2>
-          Reference <small>nine props, none required but one</small>
-        </h2>
-        <div className="table-wrap">
-          <table className="api">
-            <tbody>
+      <section className="rise mb-6" style={at(6)}>
+        <SectionTitle note="nine props, none required but one">
+          Reference
+        </SectionTitle>
+        <div className="overflow-hidden rounded-lg bg-card ring-1 ring-border ring-inset">
+          <Table className="text-[11px]">
+            <TableBody>
               {API.map(([prop, type, def, desc]) => (
-                <tr key={prop}>
-                  <td className="api__prop">
+                <TableRow key={prop} className="hover:bg-muted/50">
+                  <TableCell className="py-2.5 font-mono tracking-normal whitespace-nowrap text-primary">
                     {prop}
-                    {prop === 'url' && <span className="req">req</span>}
-                  </td>
-                  <td className="api__type">{type}</td>
-                  <td className="api__default">{def}</td>
-                  <td className="api__desc">{desc}</td>
-                </tr>
+                    {prop === "url" && (
+                      <Badge
+                        variant="outline"
+                        className="ml-1.5 h-4 px-1.5 text-[9px]"
+                      >
+                        req
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="py-2.5 font-mono tracking-normal whitespace-nowrap text-muted-foreground">
+                    {type}
+                  </TableCell>
+                  <TableCell className="py-2.5 font-mono tracking-normal whitespace-nowrap text-muted-foreground">
+                    {def}
+                  </TableCell>
+                  <TableCell className="py-2.5 text-muted-foreground">
+                    {desc}
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </section>
 
-      <footer style={at(7)}>
+      <footer
+        className="rise mt-7 flex justify-between gap-3 text-[11px] text-muted-foreground"
+        style={at(7)}
+      >
         <span>MIT © Allen Labrague</span>
         <span>
-          <a href={NPM}>npm</a> · <a href={GITHUB}>source</a>
+          <a
+            href={NPM}
+            className="text-primary underline underline-offset-2 hover:text-muted-foreground"
+          >
+            npm
+          </a>{" "}
+          ·{" "}
+          <a
+            href={GITHUB}
+            className="text-primary underline underline-offset-2 hover:text-muted-foreground"
+          >
+            source
+          </a>
         </span>
       </footer>
     </main>
-  )
+  );
 }
