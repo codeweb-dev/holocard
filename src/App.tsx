@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Check, Copy, Moon, Sun } from "lucide-react";
 import { HoloCard } from "react-holo-card";
@@ -15,33 +15,16 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 const INSTALL = "npm install react-holo-card";
 const GITHUB = "https://github.com/codeweb-dev/holo-card";
 const NPM = "https://www.npmjs.com/package/react-holo-card";
-const VERSION = "0.3.1";
+const VERSION = "0.3.3";
+
+/** The four Base Set holos, straight off pokemontcg.io — nothing ships in the repo. */
+const ART_API =
+  "https://api.pokemontcg.io/v2/cards?q=set.id:base1&pageSize=4&select=id,name,images";
+
+type Art = { id: string; file: string; alt: string };
 
 /** Stagger index for the shared rise-in animation. */
 const at = (i: number) => ({ "--i": i }) as CSSProperties;
-
-const ART = [
-  {
-    id: "aurora",
-    file: "/cards/aurora.jpg",
-    alt: "Green aurora borealis rippling over a silhouetted pine forest under a starry sky",
-  },
-  {
-    id: "prism",
-    file: "/cards/prism.jpg",
-    alt: "A rainbow spectrum cast diagonally across a dark grey surface",
-  },
-  {
-    id: "orbit",
-    file: "/cards/orbit.jpg",
-    alt: "Concentric neon rings orbiting a glowing pale sphere, fringed with prismatic colour",
-  },
-  {
-    id: "bloom",
-    file: "/cards/bloom.png",
-    alt: "Cherry trees in pink blossom along a winding stream edged with wildflowers",
-  },
-];
 
 const RADII = ["none", "sm", "md", "lg", "xl", "full"] as const;
 
@@ -177,15 +160,38 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function App() {
-  const [art, setArt] = useState(ART[0]);
+  const [cards, setCards] = useState<Art[]>([]);
+  const [pick, setPick] = useState("");
   const [radius, setRadius] = useState<HoloCardProps["radius"]>("md");
   const [sparkles, setSparkles] = useState(true);
   const [tilt, setTilt] = useState(14);
   const [gyro, setGyro] = useState(true);
 
+  useEffect(() => {
+    const ac = new AbortController();
+    fetch(ART_API, { signal: ac.signal })
+      .then((r) => r.json())
+      .then(({ data }) => {
+        const next: Art[] = data.map(
+          (c: { name: string; images: { large: string } }) => ({
+            id: c.name.toLowerCase(),
+            file: c.images.large,
+            alt: `${c.name}, a holographic card from the Pokémon Base Set`,
+          }),
+        );
+        setCards(next);
+        setPick(next[0].id);
+      })
+      // ponytail: API down or rate-limited just leaves the placeholder up. No retry until it's a real problem.
+      .catch(() => {});
+    return () => ac.abort();
+  }, []);
+
+  const art = cards.find((c) => c.id === pick);
+
   const snippet = [
     "<HoloCard",
-    `  url="${art.file}"`,
+    `  url="${art?.file ?? "…"}"`,
     "  width={280} height={390}",
     radius !== "md" && `  radius="${radius}"`,
     !sparkles && "  showSparkles={false}",
@@ -229,16 +235,24 @@ export default function App() {
 
       <section className="rise mb-6" style={at(2)}>
         <div className="grid place-items-center rounded-lg bg-card bg-[image:repeating-linear-gradient(90deg,transparent_0_27px,color-mix(in_srgb,var(--foreground)_3%,transparent)_27px_28px)] pt-7 pb-8 ring-1 ring-border ring-inset">
-          <HoloCard
-            url={art.file}
-            alt={art.alt}
-            width={280}
-            height={390}
-            radius={radius}
-            showSparkles={sparkles}
-            maxTilt={tilt}
-            gyro={gyro}
-          />
+          {art ? (
+            <HoloCard
+              url={art.file}
+              alt={art.alt}
+              width={280}
+              height={390}
+              radius={radius}
+              showSparkles={sparkles}
+              maxTilt={tilt}
+              gyro={gyro}
+            />
+          ) : (
+            <div
+              className="h-[390px] w-[280px] animate-pulse rounded-md bg-muted"
+              role="status"
+              aria-label="Loading card art"
+            />
+          )}
         </div>
         <p className="mt-2 text-center text-[11px] text-muted-foreground">
           Move your pointer across the card — or tilt your phone. That's the
@@ -249,16 +263,16 @@ export default function App() {
       <section className="rise mb-6" style={at(3)}>
         <SectionTitle note="live">Props</SectionTitle>
 
-        <Row label="url" hint="card art">
+        <Row label="url" hint="live from pokemontcg.io">
           <ToggleGroup
             type="single"
             variant="outline"
             size="sm"
-            value={art.id}
-            onValueChange={(v) => v && setArt(ART.find((a) => a.id === v)!)}
+            value={pick}
+            onValueChange={(v) => v && setPick(v)}
             className="justify-start sm:justify-end"
           >
-            {ART.map((item) => (
+            {cards.map((item) => (
               <ToggleGroupItem key={item.id} value={item.id} className={CHIP}>
                 {item.id}
               </ToggleGroupItem>
