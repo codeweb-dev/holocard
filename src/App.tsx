@@ -15,7 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 const INSTALL = "npm install react-holo-card";
 const GITHUB = "https://github.com/codeweb-dev/holo-card";
 const NPM = "https://www.npmjs.com/package/react-holo-card";
-const VERSION = "0.3.4";
+const VERSION = "0.3.5";
 
 /** The four Base Set holos, straight off pokemontcg.io — nothing ships in the repo. */
 const ART_API =
@@ -33,6 +33,14 @@ const toArt = (name: string, file: string): Art => ({
 const FALLBACK = ["Alakazam", "Blastoise", "Chansey", "Charizard"].map(
   (name, i) => toArt(name, `https://images.pokemontcg.io/base1/${i + 1}_hires.png`),
 );
+
+/**
+ * ponytail: mobile by capability, not by viewport — a phone keeps its gyro at
+ * any width, and a narrow desktop window never grows one.
+ */
+const HAS_GYRO =
+  "DeviceOrientationEvent" in window &&
+  matchMedia("(pointer: coarse)").matches;
 
 /** iOS 13+ is the only engine that withholds orientation until a gesture asks for it. */
 const NEEDS_GYRO_TAP =
@@ -292,30 +300,31 @@ export default function App() {
           )}
         </div>
         <p className="mt-2 text-center text-[11px] text-muted-foreground">
-          Move your pointer across the card — or tilt your phone. That's the
-          whole API.
+          {HAS_GYRO
+            ? "Tilt your phone — or drag across the card. That's the whole API."
+            : "Move your pointer across the card — or tilt your phone. That's the whole API."}
         </p>
-        {NEEDS_GYRO_TAP && (
-          <div className="mt-2.5 flex flex-col items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!gyro || !ready}
-              className="h-8 text-[11.5px]"
-              // HoloCard asks iOS for motion access on its own click. Forward this one so a
-              // visible button works as well as tapping the art — same user gesture either way.
-              onClick={() =>
-                stage.current
-                  ?.querySelector<HTMLElement>(".holo-card")
-                  ?.click()
-              }
-            >
-              Enable motion tilt
-            </Button>
-            <p className="text-center text-[10.5px] text-balance text-muted-foreground">
-              iOS won't hand out gyroscope data until you approve it, and only
-              over HTTPS. Tapping the card asks too — but ship a button like
-              this so people know the permission exists.
+        {HAS_GYRO && (
+          <div className="mt-3 flex flex-col items-center gap-2">
+            {NEEDS_GYRO_TAP && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!gyro || !ready}
+                className="h-9 w-full max-w-[280px] text-[12px]"
+                // HoloCard asks iOS for motion access on its own click. Forward this one so a
+                // visible button works as well as tapping the art — same user gesture either way.
+                onClick={() =>
+                  stage.current?.querySelector<HTMLElement>(".holo-card")?.click()
+                }
+              >
+                Enable motion tilt
+              </Button>
+            )}
+            <p className="max-w-[300px] text-center text-[10.5px] leading-[1.5] text-balance text-muted-foreground">
+              {NEEDS_GYRO_TAP
+                ? "iOS won't hand out gyroscope data until you approve it, and only over HTTPS. Tapping the card asks too — but ship a button like this so people know the permission exists."
+                : "Your browser hands out motion data freely, so the card is already following your phone. On iOS you'd need to approve it first."}
             </p>
           </div>
         )}
