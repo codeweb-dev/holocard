@@ -15,7 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 const INSTALL = "npm install react-holo-card";
 const GITHUB = "https://github.com/codeweb-dev/holo-card";
 const NPM = "https://www.npmjs.com/package/react-holo-card";
-const VERSION = "0.2.0";
+const VERSION = "0.3.1";
 
 /** Stagger index for the shared rise-in animation. */
 const at = (i: number) => ({ "--i": i }) as CSSProperties;
@@ -49,7 +49,7 @@ const LAYERS = [
   [
     "--rx --ry",
     "Tilt",
-    "Pointer position becomes a rotateX / rotateY, clamped to maxTilt.",
+    "Pointer — or the phone's gyroscope — becomes a rotateX / rotateY, clamped to maxTilt.",
   ],
   [
     "--mx --my",
@@ -80,6 +80,7 @@ const API: [prop: string, type: string, def: string, desc: string][] = [
   ],
   ["showSparkles", "boolean", "true", "Rainbow foil sparkle layer"],
   ["maxTilt", "number", "14", "Max tilt rotation in degrees at the edge"],
+  ["gyro", "boolean", "true", "Tilt with the device gyroscope on mobile"],
   ["alt", "string", '""', "Alt text for the image"],
   ["className", "string", "—", "Extra class on the root element"],
   ["style", "object", "—", "Extra inline styles on the root element"],
@@ -180,6 +181,7 @@ export default function App() {
   const [radius, setRadius] = useState<HoloCardProps["radius"]>("md");
   const [sparkles, setSparkles] = useState(true);
   const [tilt, setTilt] = useState(14);
+  const [gyro, setGyro] = useState(true);
 
   const snippet = [
     "<HoloCard",
@@ -188,6 +190,7 @@ export default function App() {
     radius !== "md" && `  radius="${radius}"`,
     !sparkles && "  showSparkles={false}",
     tilt !== 14 && `  maxTilt={${tilt}}`,
+    !gyro && "  gyro={false}",
     "/>",
   ]
     .filter(Boolean)
@@ -234,10 +237,12 @@ export default function App() {
             radius={radius}
             showSparkles={sparkles}
             maxTilt={tilt}
+            gyro={gyro}
           />
         </div>
         <p className="mt-2 text-center text-[11px] text-muted-foreground">
-          Move your pointer across the card. That's the whole API.
+          Move your pointer across the card — or tilt your phone. That's the
+          whole API.
         </p>
       </section>
 
@@ -261,7 +266,7 @@ export default function App() {
           </ToggleGroup>
         </Row>
 
-        <Row label="radius" hint="new in 0.2">
+        <Row label="radius" hint="corner preset or px">
           <ToggleGroup
             type="single"
             variant="outline"
@@ -301,6 +306,14 @@ export default function App() {
               {tilt}°
             </output>
           </div>
+        </Row>
+
+        <Row label="gyro" hint="new in 0.3 · tilt your phone">
+          <Switch
+            checked={gyro}
+            onCheckedChange={setGyro}
+            aria-label="Toggle gyroscope tilt"
+          />
         </Row>
 
         <pre className="mt-2.5 overflow-x-auto rounded-lg bg-card px-4 py-3.5 font-mono text-[11px] leading-[1.65] tracking-normal text-card-foreground ring-1 ring-border ring-inset">
@@ -345,7 +358,7 @@ export default function App() {
       </section>
 
       <section className="rise mb-6" style={at(6)}>
-        <SectionTitle note="nine props, none required but one">
+        <SectionTitle note="ten props, none required but one">
           Reference
         </SectionTitle>
         <div className="overflow-hidden rounded-lg bg-card ring-1 ring-border ring-inset">
