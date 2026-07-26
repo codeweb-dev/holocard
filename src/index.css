@@ -130,11 +130,19 @@
 }
 
 @layer components {
-  /* Staggered entrance, index passed as --i. */
+  /* Staggered entrance. The index comes from DOM order, so sections can be
+     reordered or added in App.tsx without renumbering anything. */
   .rise {
     animation: rise 0.5s cubic-bezier(0.2, 0, 0, 1) backwards;
     animation-delay: calc(var(--i, 0) * 70ms);
   }
+  main > :nth-child(2) { --i: 1; }
+  main > :nth-child(3) { --i: 2; }
+  main > :nth-child(4) { --i: 3; }
+  main > :nth-child(5) { --i: 4; }
+  main > :nth-child(6) { --i: 5; }
+  main > :nth-child(7) { --i: 6; }
+  main > :nth-child(8) { --i: 7; }
 }
 
 @keyframes rise {
