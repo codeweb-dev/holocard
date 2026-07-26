@@ -15,7 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 const INSTALL = "npm install react-holo-card";
 const GITHUB = "https://github.com/codeweb-dev/holo-card";
 const NPM = "https://www.npmjs.com/package/react-holo-card";
-const VERSION = "0.3.5";
+const VERSION = "0.3.7";
 
 /** The four Base Set holos, straight off pokemontcg.io — nothing ships in the repo. */
 const ART_API =
@@ -57,14 +57,14 @@ const RADII = ["none", "sm", "md", "lg", "xl", "full"] as const;
 
 const LAYERS = [
   [
-    "--rx --ry",
+    "<Tilt>",
     "Tilt",
-    "Pointer — or the phone's gyroscope — becomes a rotateX / rotateY, clamped to maxTilt.",
+    "react-parallax-tilt owns the pointer transform — maxTilt, scale, perspective and ease-back forward to it.",
   ],
   [
     "--mx --my",
     "Glare",
-    "A specular hotspot under the cursor, plus a sheen band sweeping back.",
+    "A specular hotspot under the cursor, blended with screen so it survives light art.",
   ],
   [
     "--distance",
@@ -72,9 +72,9 @@ const LAYERS = [
     "A diagonal rainbow in color-dodge, strengthening toward the edge.",
   ],
   [
-    "0 deps",
-    "Quiet",
-    "Values are written to the DOM in rAF. React never re-renders on move.",
+    "--rx --ry",
+    "Gyro",
+    "The gravity vector, low-passed — not raw beta/gamma, which flips sign holding a phone upright.",
   ],
 ];
 
@@ -90,6 +90,14 @@ const API: [prop: string, type: string, def: string, desc: string][] = [
   ],
   ["showSparkles", "boolean", "true", "Rainbow foil sparkle layer"],
   ["maxTilt", "number", "30", "Max tilt rotation in degrees at the edge"],
+  ["scale", "number", "1.04", "Scale while the pointer is over the card"],
+  ["perspective", "number", "1200", "3D depth in px — lower is more extreme"],
+  [
+    "transitionSpeed",
+    "number",
+    "400",
+    "Ease-back duration in ms on pointer leave",
+  ],
   [
     "gyro",
     "boolean",
@@ -100,6 +108,20 @@ const API: [prop: string, type: string, def: string, desc: string][] = [
   ["className", "string", "—", "Extra class on the root element"],
   ["style", "object", "—", "Extra inline styles on the root element"],
 ];
+
+/** The numeric props, their defaults, and the range each one is worth dragging over. */
+const NUMS = {
+  maxTilt: { def: 30, hint: "degrees at the edge", min: 0, max: 50, step: 1, unit: "°" },
+  scale: { def: 1.04, hint: "grow while pointing", min: 1, max: 1.2, step: 0.01, unit: "×" },
+  perspective: { def: 1200, hint: "3D depth · lower is extreme", min: 400, max: 2000, step: 50, unit: "px" },
+  transitionSpeed: { def: 400, hint: "ease-back on leave", min: 0, max: 1000, step: 50, unit: "ms" },
+} as const;
+
+type NumKey = keyof typeof NUMS;
+
+const NUM_DEFAULTS = Object.fromEntries(
+  Object.entries(NUMS).map(([k, v]) => [k, v.def]),
+) as Record<NumKey, number>;
 
 const CHIP =
   "h-7 rounded-md px-2.5 text-[11px] font-medium data-[state=on]:bg-primary data-[state=on]:text-primary-foreground";
@@ -196,7 +218,7 @@ export default function App() {
   const [pick, setPick] = useState("");
   const [radius, setRadius] = useState<HoloCardProps["radius"]>("md");
   const [sparkles, setSparkles] = useState(true);
-  const [tilt, setTilt] = useState(30);
+  const [nums, setNums] = useState(NUM_DEFAULTS);
   const [gyro, setGyro] = useState(true);
   const [ready, setReady] = useState(false);
   const stage = useRef<HTMLDivElement>(null);
@@ -234,7 +256,9 @@ export default function App() {
     "  width={280} height={390}",
     radius !== "md" && `  radius="${radius}"`,
     !sparkles && "  showSparkles={false}",
-    tilt !== 30 && `  maxTilt={${tilt}}`,
+    ...Object.entries(nums)
+      .filter(([k, v]) => v !== NUM_DEFAULTS[k as NumKey])
+      .map(([k, v]) => `  ${k}={${v}}`),
     !gyro && "  gyro={false}",
     "/>",
   ]
@@ -252,7 +276,7 @@ export default function App() {
         </h1>
         <div className="flex items-center gap-2">
           <span className="font-mono text-[10.5px] tracking-normal text-muted-foreground">
-            v{VERSION} · 0 deps
+            v{VERSION} · 1 dep
           </span>
           <a
             href={GITHUB}
@@ -285,8 +309,8 @@ export default function App() {
               height={390}
               radius={radius}
               showSparkles={sparkles}
-              maxTilt={tilt}
               gyro={gyro}
+              {...nums}
             />
           ) : (
             <div
@@ -375,22 +399,31 @@ export default function App() {
           />
         </Row>
 
-        <Row label="maxTilt" hint="degrees at the edge">
-          <div className="flex items-center gap-3">
-            <Slider
-              min={0}
-              max={50}
-              step={1}
-              value={[tilt]}
-              onValueChange={([v]) => setTilt(v)}
-              aria-label="Max tilt in degrees"
-              className="w-full sm:w-[140px]"
-            />
-            <output className="w-8 text-right font-mono text-[11px] tabular-nums text-muted-foreground">
-              {tilt}°
-            </output>
-          </div>
-        </Row>
+        {(Object.keys(NUMS) as NumKey[]).map((key) => {
+          const { hint, min, max, step, unit } = NUMS[key];
+          return (
+            <Row key={key} label={key} hint={hint}>
+              <div className="flex items-center gap-3">
+                <Slider
+                  min={min}
+                  max={max}
+                  step={step}
+                  value={[nums[key]]}
+                  // step 0.01 lands on 1.0700000000000003 without the round
+                  onValueChange={([v]) =>
+                    setNums((n) => ({ ...n, [key]: +v.toFixed(2) }))
+                  }
+                  aria-label={key}
+                  className="w-full sm:w-[140px]"
+                />
+                <output className="w-12 text-right font-mono text-[11px] tabular-nums text-muted-foreground">
+                  {nums[key]}
+                  {unit}
+                </output>
+              </div>
+            </Row>
+          );
+        })}
 
         <Row label="gyro" hint="tilt your phone · iOS needs approval">
           <Switch
@@ -406,7 +439,7 @@ export default function App() {
       </section>
 
       <section className="rise mb-6" style={at(4)}>
-        <SectionTitle note="three layers, zero re-renders">
+        <SectionTitle note="pointer and sensor, zero re-renders">
           How it works
         </SectionTitle>
         <div className="grid gap-1.5 sm:grid-cols-2">
@@ -429,7 +462,9 @@ export default function App() {
       </section>
 
       <section className="rise mb-6" style={at(5)}>
-        <SectionTitle note="peer dependency: react ≥ 17">Install</SectionTitle>
+        <SectionTitle note="react ≥ 17 · pulls in react-parallax-tilt">
+          Install
+        </SectionTitle>
         <div className="flex items-center gap-2.5 rounded-lg bg-card py-1.5 pr-1.5 pl-3 ring-1 ring-border ring-inset">
           <span className="font-mono text-[11.5px] text-muted-foreground">
             $
@@ -442,7 +477,7 @@ export default function App() {
       </section>
 
       <section className="rise mb-6" style={at(6)}>
-        <SectionTitle note="ten props, none required but one">
+        <SectionTitle note="thirteen props, none required but one">
           Reference
         </SectionTitle>
         <div className="overflow-hidden rounded-lg bg-card ring-1 ring-border ring-inset">
